@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <div id="mvvm">
+        <div>test{{flag}}</div>
+        <h2>aaaa{{b}}</h2>
+        <h2>arr{{arr}}</h2>
+        <h2>arr{{obj.a}}</h2>
+        <input type="text" x-model="a">
+        <input type="text" x-model="b">
+        <p x-html="a">{{ a }}</p>
+        <p x-html="arr">{{ arr }}</p>
+
+        <button type="button" name="button" x-on:click="testToggle">change b</button>
+        <button type="button" name="button" x-on:click="pushArray">push array b</button>
+        <button type="button" name="button" x-on:click="changeObj">changeObj</button>
+    </div>
+    <script src='./core/utils.js'></script>
+    <script src="./core/dep.js"></script>
+    <script src="./core/compile.js"></script>
+    <script src="./core/observer.js"></script>
+    <script src="./core/watcher.js"></script>
+    <script src="./core/mvvm.js"></script>
+    <script>
+    var vm = new MVVM({
+        el: '#mvvm',
+        data: {
+            a: 'test model',
+            b: 'hello MVVM',
+            flag: true,
+            obj: {
+                a:10,
+                b: 'bsfgsfgsfgsdg',
+                c: 'c',
+            },
+            arr: [1,2,3],
+        },
+        methods: {
+            changeObj: function() {
+                this.obj.a++;
+            },
+            testToggle: function () {
+              this.flag = !this.flag;
+              this.b = this.flag ? 'hello MVVM' : 'test success'
+              this.a = this.flag ? '100' : '200'
+            },
+            pushNew: function() {
+                this.obj.push(Math.random()*100)
+            },
+            pushArray: function() {
+                this.arr.push(10);
+            }
+        }
+    });
+    </script>
+</body>
+</html>
