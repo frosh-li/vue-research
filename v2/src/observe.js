@@ -1,5 +1,5 @@
 import {isArray, getMethods} from "./util";
-import Dep from "./dep.js";
+import Dep from "./dep";
 
 class Observe {
     constructor(data, vm) {
@@ -11,21 +11,14 @@ class Observe {
         let keys = Object.keys(data);
         keys.forEach(key => {
             if(data.hasOwnProperty(key)) {
-                if(isArray(data[key])) {
-                    // 监听数组
-                    this.observeArray(key, data[key]);
-                } else {
-                    this.walk(data, key, data[key]);
-                }
+                this.walk(data, key, data[key]);
             }
-
         })
     }
 
-    observeArray(key, data) {
-        Object.setPrototypeOf(data, getMethods(key, this.vm));
+    observeArray(data, key, val, dep) {
+        Object.setPrototypeOf(val, getMethods(key, this.vm, dep));
     }
-
 
     /**
      * walk - 监听正常对象
@@ -34,35 +27,38 @@ class Observe {
      * @return {type}      description
      */
     walk(data, key, val) {
-
         let property = Object.getOwnPropertyDescriptor(data, key);
-        console.log(property);
         if (property && property.configurable === false) {
             return
         }
-
-        console.log('defineProperty', data, key, val, typeof val)
-
+        let dep = new Dep();
+        console.log('defineProperty', key);
         Object.defineProperty(data, key, {
             emumerable: true, //可以枚举
             configurable: true, //可以重新定义
             get: () => {
+                var value = this.getter ? this.getter.call(data) : val;
                 console.log(`${key}获取成功`)
-                return val;
+                console.log("dep target", Dep.target);
+                if(Dep.target) {
+                    dep.depend();
+                }
+                return value;
             },
             set: (newVal) => {
                 if(val === newVal || (newVal !== newVal && val !== val)) {
                     return;
                 }
                 console.log(`${key}被设置成${newVal}`);
-
                 val = newVal;
-                (this.vm.events[`change:${key}`] && this.vm.events[`change:${key}`](newVal));
+                dep.notify();
                 return newVal;
             }
         })
 
-        if(typeof val === 'object'){
+        if(isArray(val)) {
+            this.observeArray(data, key, val, dep);
+        }else if (typeof val === 'object') {
             this.observe(val);
         }
 

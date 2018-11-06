@@ -14,7 +14,7 @@ const methodsToPatch = [
 
 
 
-function getMethods(key, vm) {
+function getMethods(key, vm, dep) {
     methodsToPatch.forEach(cmethod => {
         const originMethod = methods[cmethod];
         let that = this;
@@ -35,7 +35,11 @@ function getMethods(key, vm) {
                     inserted = args.slice(2)
                     break
                 }
-                (vm.events[`change:${key}`] && vm.events[`change:${key}`]());
+                console.log('vue list change');
+                if(inserted) {
+                    dep.notify();
+                }
+
                 return results
             }
         })

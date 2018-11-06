@@ -4,12 +4,14 @@ class Vue {
     constructor(options = {
         el,
         data,
+        methods,
     }) {
         console.log(options);
 
-        let {el ,data} = options;
+        let {el ,data, methods} = options;
         this.data = data;
         this.el = el;
+        this.methods = Object.create(methods||null);
         this.events = {};
         this.observe(this.data);
 

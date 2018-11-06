@@ -12,5 +12,11 @@ window.vue = new Vue({
         name: "frosh lee",
         count:111,
         list: [1,2,3,4]
+    },
+    methods: {
+        changeName: function() {
+            console.log('测试方法绑定解析');
+            this.data.name = "changed name" + Math.floor(Math.random()*100)
+        }
     }
 })
