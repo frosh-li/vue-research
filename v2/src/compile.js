@@ -29,7 +29,24 @@ class Compile {
         })
     }
 
-    createTextNode(node, exp) {
+    buildExp(exp) {
+        let regExp = /[\+\-\*\/]/;
+        let oText = exp;
+        let ret = [];
+        let len;
+        while(oText && (len = oText.split(regExp).length)) {
+            let subs = oText.split(regExp);
+            console.log("subs", subs)
+            ret.push("data."+subs[0].trim());
+            oText = oText.replace(subs[0], "");
+            ret.push(oText.substring(0,1));
+            oText = oText.substring(1);
+        }
+        console.log("out expfun", ret.join(""));
+        return "return "+ret.join("");
+    }
+
+    createTextNode(node) {
         // 纯文本替换
         let reg = /\{\{((?:.|\n)+?)\}\}/g;
 
@@ -38,32 +55,54 @@ class Compile {
         if(matches) {
             let otext = text;
             matches.forEach(c => {
-                exp = c.replace(/[\{\}]/g, "");
-                let rReg = new RegExp(c, "g");
-                if(exp.indexOf(".") > -1) {
-                    // 有.分隔符的
-                    let vars = exp.split(".");
-                    let val = this.vm.data;
-                    vars.forEach(_var => {
-                        val = val[_var];
-                    });
-                    otext = otext.replace(rReg, val);
+                let exp = c.toString().replace(/[\{\}]/g, "");
+                console.log("first exps", exp);
+
+
+                if(/[^\w.$]/.test(exp)) {
+                    console.log('exp has error', exp);
+
+                    let val = (new Function('data', this.buildExp(exp)))(this.vm.data);
+                    console.log('a+b is', exp, val, c)
+                    let rReg = new RegExp(c, "g");
+                    otext = otext.replace(c, val);
+                    console.log("otext", otext);
+
+                    new Watcher(this.vm ,"a", (value, oldValue) =>{
+                        this.updater(node, value, oldValue,"a", "text");
+                    })
+
+                    new Watcher(this.vm ,"b", (value, oldValue) =>{
+                        this.updater(node, value, oldValue,"b", "text");
+                    })
+
                 }else{
-                    // 没有点号的时候直接完成替换
-                    otext = otext.replace(rReg, this.vm.data[c.replace(/[\{\}]/g,"")]);
+                    let exps = exp.split('.');
+
+                    let val = (function(obj) {
+                        for(let i = 0 , len = exps.length ; i < len ; i++) {
+                            console.log('exps out', exps[i])
+                            if(!obj) {
+                                return;
+                            }
+                            obj = obj[exps[i]]
+                        }
+
+                        return obj;
+                    })(this.vm.data);
+                    console.log('current val', exp, val);
+                    let rReg = new RegExp(c, "g");
+                    otext = otext.replace(rReg, val);
+                    new Watcher(this.vm ,exp, (value, oldValue) =>{
+                        this.updater(node, value, oldValue,exp, "text");
+                    })
                 }
-
-                new Watcher(this.vm ,exp, (value, oldValue) =>{
-                    this.updater(node, value, oldValue,exp, "text");
-                })
-
-                //this.bind(node, exp, "text");
             })
             node.textContent = otext;
         }else{
             node.textContent = "";
         }
-        console.log(text.trim(), exp)
+        // console.log(text.trim(), exp)
     }
 
     updater(node, value, oldValue, exp, ctype) {
@@ -75,20 +114,33 @@ class Compile {
                 if(matches) {
                     let otext = text;
                     matches.forEach(c => {
-                        exp = c.replace(/[\{\}]/g, "");
-                        let rReg = new RegExp(c, "g");
-                        console.log(this.vm.data, c, exp);
-                        if(exp.indexOf(".") > -1) {
-                            // 有.分隔符的
-                            let vars = exp.split(".");
-                            let val = this.vm.data;
-                            vars.forEach(_var => {
-                                val = val[_var];
-                            });
-                            otext = otext.replace(rReg, val);
+                        let exp = c.toString().replace(/[\{\}]/g, "");
+                        if(/[^\w.$]/.test(exp)) {
+                            console.log('exp has error', exp);
+
+                            let val = (new Function('data', 'return data.a + data.b;'))(this.vm.data);
+                            console.log('a+b is', exp, val, c)
+                            let rReg = new RegExp(c, "g");
+                            otext = otext.replace(c, val);
+                            console.log("otext", otext);
+
                         }else{
-                            // 没有点号的时候直接完成替换
-                            otext = otext.replace(rReg, this.vm.data[c.replace(/[\{\}]/g,"")]);
+                            let exps = exp.split('.');
+
+                            let val = (function(obj) {
+                                for(let i = 0 , len = exps.length ; i < len ; i++) {
+                                    console.log('exps out', exps[i])
+                                    if(!obj) {
+                                        return;
+                                    }
+                                    obj = obj[exps[i]]
+                                }
+
+                                return obj;
+                            })(this.vm.data);
+                            console.log('current val', exp, val);
+                            let rReg = new RegExp(c, "g");
+                            otext = otext.replace(rReg, val);
                         }
                     })
                     node.textContent = otext;
@@ -147,7 +199,7 @@ class Compile {
 
                 let eventType = dir;
                 let fn = self.vm.methods && self.vm.methods[exp];
-                
+
                 if(eventType && fn) {
                     node.addEventListener(eventType, fn.bind(self.vm), false);
                 }
